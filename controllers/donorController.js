@@ -1,5 +1,6 @@
 const Donor = require('./../models/donorModel');
 const catchAsync = require('./../utils/catchAsync');
+const AppError = require('./../utils/appError');
 
 exports.getAllDonors = catchAsync(async (req, res, next) => {
 
@@ -16,6 +17,9 @@ exports.getAllDonors = catchAsync(async (req, res, next) => {
 exports.getDonor = catchAsync(async (req, res, next) => {
 
     const donor = await Donor.findById(req.params.id);
+    if (!donor) {
+        return next(new AppError('No Tour found with that ID', 404));
+    }
     res.status(200).json({
         status: "success",
         data: {
@@ -39,6 +43,9 @@ exports.createDonor = catchAsync(async (req, res, next) => {
 exports.deleteDonor = catchAsync(async (req, res, next) => {
 
     const deleteDonor = await Donor.findByIdAndDelete(req.params.id);
+    if (!deleteDonor) {
+        return next(new AppError('No Tour found with that ID', 404));
+    }
     res.status(200).json({
         status: "success",
         data: {
@@ -52,6 +59,9 @@ exports.deleteDonor = catchAsync(async (req, res, next) => {
 exports.updateDonor = catchAsync(async (req, res, next) => {
 
     const updateDonor = await Donor.findByIdAndUpdate(req.params.id, req.body);
+    if (!updateDonor) {
+        return next(new AppError('No Tour found with that ID', 404));
+    }
     res.status(200).json({
         status: "success",
         data: {

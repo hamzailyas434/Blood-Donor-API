@@ -17,9 +17,16 @@ if (process.env.NODE_ENV === "development") {
 }
 app.use(express.json());
 
+app.use((req, res, next) => {
+    // console.log(req.headers);
+    next();
+});
+
 app.use('/api/v1/donors', donorRoute);
 //User Route
 app.use('/api/v1/users', userRouter);
+
+
 // Global Error Handling  Original: 127.0.0.1:3000/api/v1/donors Error: 127.0.0.1:3000/api/v1/donor
 app.all('*', (req, res, next) => {
     next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));

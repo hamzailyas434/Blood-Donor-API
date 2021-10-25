@@ -1,48 +1,52 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 // Import Validator for email validation
-const validator = require('validator');
+const validator = require("validator");
 //Add Hash Encryption in Password
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
         trim: true,
-        required: [true, 'Please enter your name']
+        required: [true, "Please enter your name"],
     },
     email: {
         type: String,
         trim: true,
-        required: [true, 'Please enter your email'],
+        required: [true, "Please enter your email"],
         unique: true,
         lowercase: true,
-        validate: [validator.isEmail, 'Please provide a valid email']
+        validate: [validator.isEmail, "Please provide a valid email"],
     },
     photo: String,
+
     password: {
         type: String,
-        required: [true, 'Please provide a Password'],
+        required: [true, "Please provide a Password"],
         minlength: 8,
         // hide because we don't want to show password in Get all User Record
-        select: false
+        select: false,
     },
     passwordConfirm: {
         type: String,
-        required: [true, 'Please confirm your Password'],
+        required: [true, "Please confirm your Password"],
         validate: {
             // This is only works on Create and SAVE !!
             validator: function (el) {
-                return el === this.password;  // abc === abc
+                return el === this.password; // abc === abc
             },
-            message: 'Passwords are not the same'
-        }
-    }
-
+            message: "Passwords are not the same",
+        },
+    },
+    passwordChangedAt: {
+        type: Date,
+        default: Date.now()
+    },
 });
 // Encryption add Between getting the data and adding in the database
-userSchema.pre('save', async function (next) {
+userSchema.pre("save", async function (next) {
     // Only run this function if password was actually modified
-    if (!this.isModified('password')) return next();
+    if (!this.isModified("password")) return next();
 
     //  Hash the password with cost of 12
     this.password = await bcrypt.hash(this.password, 12);
@@ -52,8 +56,20 @@ userSchema.pre('save', async function (next) {
     next();
 });
 
-userSchema.methods.correctPassword = async function (candidatePassword, userPassword) {
+// Instant Methods
+userSchema.methods.correctPassword = async function (
+    candidatePassword,
+    userPassword
+) {
     return await bcrypt.compare(candidatePassword, userPassword);
 };
-const User = mongoose.model('User', userSchema);
+userSchema.methods.changedPasswordAfter = function (JWTTimeStamp) {
+    if (this.passwordChangedAt) {
+        const changedTimeStamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return JWTTimeStamp < changedTimeStamp;
+    }
+    //False means not change
+    return false;
+};
+const User = mongoose.model("User", userSchema);
 module.exports = User;

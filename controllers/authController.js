@@ -5,6 +5,9 @@ const AppError = require('./../utils/appError');
 const catchAsync = require('./../utils/catchAsync');
 // Import Json web token library
 const jwt = require('jsonwebtoken');
+//  Node Built in Promisify method for | 2) Valid token or not Verification
+const {promisify} = require('util');
+
 
 // Apply JWT token
 const signToken = id => {
@@ -18,7 +21,8 @@ exports.signup = catchAsync(async (req, res) => {
         name: req.body.name,
         email: req.body.email,
         password: req.body.password,
-        passwordConfirm: req.body.passwordConfirm
+        passwordConfirm: req.body.passwordConfirm,
+        passwordChangedAt: req.body.passwordChangedAt
     });
 
     // Apply JWT token
@@ -63,14 +67,22 @@ exports.protect = catchAsync(async (req, res, next) => {
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
-    console.log(token);
     if (!token) {
         return next(new AppError('You are not logged in! Please log in get access', 401));
     }
     // 2) Valid token or not Verification
-    // 3) Check if user still exists
-    // 4) if user change password after the JWT token was issued
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
 
-    // return next(new AppError('Unauthorize Access',404))
+    // 3) Check if user still exists
+    const freshUser = await User.findById(decoded.id);
+    if (!freshUser) {
+        return next(new AppError('The user belonging to this user does not exists', 401));
+    }
+    // 4) if user change password after the JWT token was issued
+    if (freshUser.changedPasswordAfter(decoded.iat)) {
+        return next(new AppError('User Recently changed password! Please log in again.', 401));
+    }
+    // Grant access to protected route
+    req.user = freshUser;
     next();
 });
